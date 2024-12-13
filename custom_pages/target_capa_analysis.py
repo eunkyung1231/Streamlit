@@ -41,28 +41,30 @@ def show_page():
         st.write("IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아니고 OPER_TYPE == 'Operation' 인 데이터:")
         st.dataframe(operation_rows.reset_index(drop=True))
 
-        # ITEM_ID와 OPER_ID를 그룹으로 TARGET_QTY의 합 계산
-        grouped_data = operation_rows.groupby(['ITEM_ID', 'OPER_ID'])['TARGET_QTY'].sum().reset_index()
+        # ITEM_ID, ROUTING_ID와 OPER_ID를 그룹으로 TARGET_QTY의 합 계산
+        grouped_data = operation_rows.groupby(['ITEM_ID', 'ROUTING_ID', 'OPER_ID'])['TARGET_QTY'].sum().reset_index()
 
-        # ROUTING_ID와 OPER_ID를 키로 OPER_RES 테이블에서 USAGE_PER 값 찾기
-        oper_res_merged = operation_rows.merge(
-            oper_res_df,
+        # ROUTING_ID와 OPER_ID를 키로 OPER_RES 테이블에서 매칭된 행 수 계산 및 AVG_USAGE_PER 계산
+        resource_usage = oper_res_df.groupby(['ROUTING_ID', 'OPER_ID']).agg(
+            RES_COUNT=('USAGE_PER', 'size'),
+            AVG_USAGE_PER=('USAGE_PER', 'mean')
+        ).reset_index()
+
+        # RES_COUNT와 AVG_USAGE_PER을 ITEM_ID, ROUTING_ID, OPER_ID 그룹 데이터에 추가
+        grouped_data = grouped_data.merge(
+            resource_usage,
             on=['ROUTING_ID', 'OPER_ID'],
             how='left'
         )
 
-        # USAGE_PER 값 계산
-        oper_res_merged['AVG_USAGE_PER'] = oper_res_merged.groupby(['ITEM_ID', 'OPER_ID'])['USAGE_PER'].transform('mean')
+        # DAILY_MAX_OUTPUT 계산
+        grouped_data['DAILY_MAX_OUTPUT'] = 86400 / grouped_data['AVG_USAGE_PER']
 
-        # AVG_USAGE_PER을 ITEM_ID와 OPER_ID 그룹 데이터에 추가
-        grouped_data = grouped_data.merge(
-            oper_res_merged[['ITEM_ID', 'OPER_ID', 'AVG_USAGE_PER']].drop_duplicates(),
-            on=['ITEM_ID', 'OPER_ID'],
-            how='left'
-        )
+        # 결과 데이터에서 ROUTING_ID와 OPER_ID 제거
+        grouped_data = grouped_data.drop(columns=['ROUTING_ID', 'OPER_ID'], errors='ignore')
 
-        st.write("ITEM_ID와 OPER_ID를 그룹으로 TARGET_QTY 합계와 AVG_USAGE_PER 계산:")
-        st.dataframe(grouped_data)
+        st.write("ITEM_ID를 그룹으로 TARGET_QTY 합계, RES_COUNT, AVG_USAGE_PER 및 DAILY_MAX_OUTPUT 계산:")
+        st.dataframe(grouped_data[['ITEM_ID', 'TARGET_QTY', 'RES_COUNT', 'AVG_USAGE_PER', 'DAILY_MAX_OUTPUT']])
 
     except Exception as e:
         st.error(f"Error reading or processing the file: {e}")
