@@ -15,13 +15,14 @@ def show_page():
 
     # 데이터 처리 공통 함수
     def process_data(df_filtered, group_col):
+        # 그룹화 대상 외에 필요한 열 유지
         grouped = df_filtered.groupby(group_col).agg({
             'TOTAL_CAPA': 'sum',
             'OFF_TIME_CAPA': 'sum',
             'ALLOCATION_CAPA': 'sum',
             'PM_CAPA': 'sum',
             'SETUP_CAPA': 'sum',
-            'REMAIN_CAPA': 'sum'
+            'REMAIN_CAPA': 'sum',
         }).reset_index()
 
         # 비율 계산
@@ -31,10 +32,24 @@ def show_page():
         grouped['SETUP_CAPA_%'] = (grouped['SETUP_CAPA'] / grouped['TOTAL_CAPA']) * 100
         grouped['REMAIN_CAPA_%'] = (grouped['REMAIN_CAPA'] / grouped['TOTAL_CAPA']) * 100
 
+        # 원본 데이터에서 필요한 열 추가 (TARGET_TYPE, CAPA_TYPE)
+        grouped = pd.merge(grouped, df_filtered[[group_col, 'TARGET_TYPE', 'CAPA_TYPE']].drop_duplicates(), on=group_col, how='left')
+
         # Allocation_capa 퍼센티지 기준으로 정렬
         grouped = grouped.sort_values(by='ALLOCATION_CAPA_%', ascending=False)
 
         return grouped
+
+    # 드롭박스에 표시될 RES_GROUP_ID 순서 지정
+    def reorder_dropdown(df):
+        # 조건에 따라 우선순위 컬럼 생성
+        df['priority'] = np.where(
+            (df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Time'), 1,
+            np.where((df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Quantity'), 2, 3)
+        )
+        # 우선순위와 RES_GROUP_ID를 기준으로 정렬
+        df = df.sort_values(by=['priority', 'RES_GROUP_ID'])
+        return df
 
     # 그래프 생성 함수
     def create_chart(grouped, group_col, title):
@@ -86,6 +101,9 @@ def show_page():
 
     # 전체 데이터를 사용하여 처리
     grouped_time = process_data(df, 'RES_GROUP_ID')
+
+    # RES_GROUP_ID 재정렬
+    grouped_time = reorder_dropdown(grouped_time)
 
     # RES_GROUP_ID 선택
     selected_group = st.selectbox("세부 그래프를 볼 RES_GROUP_ID를 선택하세요:", grouped_time['RES_GROUP_ID'])

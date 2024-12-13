@@ -7,8 +7,7 @@ def show_page():
     st.title("DEMAND_QTY 분석 (일별, 주별, 월별)")
 
     # Parquet 파일 경로 지정
-    model_path = 'C:\\Users\\vms\\Desktop\\20241203-M-02_Engine_20241203104507_t\\Data\\'
-    # model_path = 'C:\\Users\\vms\\Downloads\\20241210-P-BOM2_Engine_20241210081853\\Data\\'
+    model_path = 'D:\\Model\\Production_SHINSUNG\\P-20241211-M-02_Engine_20241211152108\\Data\\'
     file_path = 'DEMAND.parquet'
 
     # Parquet 파일 읽기
