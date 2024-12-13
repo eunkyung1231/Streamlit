@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 def show_page():
     st.title("TARGET 대비 CAPA 분석 - Operation 데이터 확인")
@@ -24,7 +26,8 @@ def show_page():
             target_plan_df['ROUTING_ID'].notnull() & (target_plan_df['ROUTING_ID'] != "") &
             target_plan_df['OPER_ID'].notnull() & (target_plan_df['OPER_ID'] != "")
         ]
-        st.write(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아닌 행 수: {valid_out_df.shape[0]}")
+        with st.expander(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아닌 행 수: {valid_out_df.shape[0]}"):
+            st.write(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아닌 행 수: {valid_out_df.shape[0]}")
 
         # ROUTING_ID와 OPER_ID를 키로 ROUTING_OPER 테이블에서 데이터 찾기
         merged_data = valid_out_df.merge(
@@ -35,11 +38,8 @@ def show_page():
 
         # OPER_TYPE이 'Operation'인 행 필터링
         operation_rows = merged_data[merged_data['OPER_TYPE'] == 'Operation']
-        st.write(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아니고 OPER_TYPE == 'Operation' 인 행 수: {operation_rows.shape[0]}")
-
-        # OPER_TYPE이 'Operation'인 데이터 표시
-        st.write("IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아니고 OPER_TYPE == 'Operation' 인 데이터:")
-        st.dataframe(operation_rows.reset_index(drop=True))
+        with st.expander(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아니고 OPER_TYPE == 'Operation' 인 데이터 (총 {operation_rows.shape[0]} 행)"):
+            st.dataframe(operation_rows.reset_index(drop=True))
 
         # ITEM_ID, ROUTING_ID와 OPER_ID를 그룹으로 TARGET_QTY의 합 계산
         grouped_data = operation_rows.groupby(['ITEM_ID', 'ROUTING_ID', 'OPER_ID'])['TARGET_QTY'].sum().reset_index()
@@ -67,16 +67,45 @@ def show_page():
         # 결과 데이터에서 ROUTING_ID는 제거
         grouped_data = grouped_data.drop(columns=['ROUTING_ID'], errors='ignore')
 
-        # 차트에 표시하기 전 소수점 셋째 자리에서 반올림
+        # 차트에 표시하기 전 소수점 셋째 자리에서 반올림 및 NEED_DAYS 기준 정렬
         display_data = grouped_data.copy()
         display_data['TARGET_QTY'] = display_data['TARGET_QTY'].round(3)
         display_data['RES_COUNT'] = display_data['RES_COUNT'].round(3)
         display_data['AVG_USAGE_PER'] = display_data['AVG_USAGE_PER'].round(3)
         display_data['DAILY_MAX_OUTPUT'] = display_data['DAILY_MAX_OUTPUT'].round(3)
         display_data['NEED_DAYS'] = display_data['NEED_DAYS'].round(3)
+        display_data = display_data.sort_values(by='NEED_DAYS', ascending=False)
 
-        st.write("ITEM_ID를 그룹으로 TARGET_QTY 합계, OPER_ID, RES_COUNT, RES_IDS, AVG_USAGE_PER, DAILY_MAX_OUTPUT 및 NEED_DAYS 계산:")
+        st.write("NEED_DAYS 계산 표:")
         st.dataframe(display_data[['ITEM_ID', 'OPER_ID', 'TARGET_QTY', 'RES_COUNT', 'RES_IDS', 'AVG_USAGE_PER', 'DAILY_MAX_OUTPUT', 'NEED_DAYS']])
+
+        # X축: ITEM_ID + '#' + OPER_ID, Y축: NEED_DAYS 기준 차트 생성 (전체 데이터 포함)
+        display_data['X_AXIS'] = display_data['ITEM_ID'] + '#' + display_data['OPER_ID']
+        fig = px.bar(display_data, x='X_AXIS', y='NEED_DAYS', title='NEED_DAYS 기준 차트 (전체 데이터)', labels={'X_AXIS': 'ITEM_ID#OPER_ID', 'NEED_DAYS': 'NEED_DAYS'})
+
+        # X축 스크롤링 조건 설정 (10개 초과일 경우만)
+        if len(display_data['X_AXIS']) > 10:
+            fig.update_layout(
+                xaxis=dict(
+                    title="ITEM_ID#OPER_ID",
+                    tickangle=45,
+                    automargin=True,
+                    range=[-0.5, 9.5],  # 처음엔 처음 10개만 보이도록 설정
+                    fixedrange=False,  # 확대/축소 가능
+                )
+            )
+        else:
+            # X축 스크롤 및 확대/축소 비활성화
+            fig.update_layout(
+                xaxis=dict(
+                    title="ITEM_ID#OPER_ID",
+                    tickangle=45,
+                    automargin=True,
+                    fixedrange=True,  # 확대/축소 불가
+                )
+            )
+
+        st.plotly_chart(fig)
 
     except Exception as e:
         st.error(f"Error reading or processing the file: {e}")
