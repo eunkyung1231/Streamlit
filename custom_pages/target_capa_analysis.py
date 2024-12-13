@@ -69,14 +69,14 @@ def show_page():
 
         # 차트에 표시하기 전 소수점 셋째 자리에서 반올림 및 NEED_DAYS 기준 정렬
         display_data = grouped_data.copy()
-        display_data['TARGET_QTY'] = display_data['TARGET_QTY'].round(3)
-        display_data['RES_COUNT'] = display_data['RES_COUNT'].round(3)
-        display_data['AVG_USAGE_PER'] = display_data['AVG_USAGE_PER'].round(3)
-        display_data['DAILY_MAX_OUTPUT'] = display_data['DAILY_MAX_OUTPUT'].round(3)
-        display_data['NEED_DAYS'] = display_data['NEED_DAYS'].round(3)
+        display_data['TARGET_QTY'] = display_data['TARGET_QTY'].round(2)
+        display_data['RES_COUNT'] = display_data['RES_COUNT'].round(2)
+        display_data['AVG_USAGE_PER'] = display_data['AVG_USAGE_PER'].round(2)
+        display_data['DAILY_MAX_OUTPUT'] = display_data['DAILY_MAX_OUTPUT'].round(2)
+        display_data['NEED_DAYS'] = display_data['NEED_DAYS'].round(2)
         display_data = display_data.sort_values(by='NEED_DAYS', ascending=False)
 
-        st.write("NEED_DAYS 계산 표:")
+        st.write("**NEED_DAYS 계산 표**")
         st.dataframe(display_data[['ITEM_ID', 'OPER_ID', 'TARGET_QTY', 'RES_COUNT', 'RES_IDS', 'AVG_USAGE_PER', 'DAILY_MAX_OUTPUT', 'NEED_DAYS']])
 
         # X축: ITEM_ID + '#' + OPER_ID, Y축: NEED_DAYS 기준 차트 생성 (전체 데이터 포함)
