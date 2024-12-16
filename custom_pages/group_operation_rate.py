@@ -75,19 +75,40 @@ def show_page(uploaded_files):
                     marker_color=color,
                     customdata=np.stack(grouped['customdata'].to_numpy()),
                     hovertemplate=(f"{category.capitalize()}: %{{customdata[{i}][0]:.2f}}% "
-                                   f"(%{{customdata[{i}][1]:,.0f}}/%{{customdata[{i}][2]:,.0f}})<extra></extra>")
+                                f"(%{{customdata[{i}][1]:,.0f}}/%{{customdata[{i}][2]:,.0f}})<extra></extra>"),
+                )
+            )
+
+        # X축 스크롤링 조건 설정 (10개 초과일 경우만)
+        if len(grouped['X_LABEL']) > 10:
+            fig.update_layout(
+                xaxis=dict(
+                    title="장비 그룹 (RES_GROUP_ID)",
+                    tickangle=45,
+                    automargin=True,
+                    range=[-0.5, 9.5],  # 처음에 처음 10개만 보이도록 설정
+                    fixedrange=False,  # 확대/축소 가능
+                )
+            )
+        else:
+            fig.update_layout(
+                xaxis=dict(
+                    title="장비 그룹 (RES_GROUP_ID)",
+                    tickangle=45,
+                    automargin=True,
+                    fixedrange=True,  # 확대/축소 불가
                 )
             )
 
         fig.update_layout(
             title=title,
-            xaxis=dict(title="장비 그룹 (RES_GROUP_ID)", tickangle=45),
             yaxis_title="백분율 (%)",
             barmode='stack',
             hovermode="x unified",
             margin=dict(l=10, r=10, t=30, b=70),
         )
         return fig
+
 
     # 데이터 필터링 및 차트 생성
     df_time = df[(df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Time')]
