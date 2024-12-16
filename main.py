@@ -21,7 +21,7 @@ def extract_zip(uploaded_zip):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
         zip_ref.extractall(temp_dir.name)
 
-    return temp_dir
+    return temp_dir, temp_dir.name
 
 def find_parquet_files(base_dir, required_files):
     """재귀적으로 폴더를 탐색하며 필요한 파일을 찾는 함수"""
@@ -34,34 +34,39 @@ def find_parquet_files(base_dir, required_files):
 
 # Streamlit UI
 st.sidebar.header("ZIP 파일 업로드")
-uploaded_zip = st.sidebar.file_uploader("ZIP 파일을 업로드하세요", type="zip")
+uploaded_zips = st.sidebar.file_uploader("ZIP 파일을 여러 개 업로드하세요", type="zip", accept_multiple_files=True)
 
-if uploaded_zip:
-    # ZIP 파일 해제
-    temp_dir = extract_zip(uploaded_zip)
-    st.success("ZIP 파일이 성공적으로 업로드 및 해제되었습니다!")
+if uploaded_zips:
+    extracted_zips = {}
+    # ZIP 파일 목록을 보여주는 셀렉트 박스
+    selected_zip = st.sidebar.selectbox("ZIP 파일을 선택하세요", [zip_file.name for zip_file in uploaded_zips])
 
-    # 필요한 파일 정의
-    required_files = ["TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet"]
-    found_files = find_parquet_files(temp_dir.name, required_files)
+    # 선택한 ZIP 파일만 처리
+    for uploaded_zip in uploaded_zips:
+        if uploaded_zip.name == selected_zip:
+            temp_dir, temp_dir_path = extract_zip(uploaded_zip)
+            st.success(f"ZIP 파일 '{uploaded_zip.name}'이 성공적으로 해제되었습니다!")
 
-    # 페이지 선택
-    page = st.sidebar.radio(
-        "페이지를 선택하세요",
-        ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석"]
-    )
+            # 필요한 파일 정의
+            required_files = ["TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet"]
+            found_files = find_parquet_files(temp_dir_path, required_files)
+            extracted_zips[uploaded_zip.name] = found_files
 
-    # 페이지 라우팅
-    if page == "DEMAND_QTY 분석":
-        demand.show_page(found_files)
-    elif page == "장비 그룹별 가동율 현황":
-        group_rate.show_page(found_files)
-    elif page == "장비 그룹별 개별 가동율 현황":
-        equipment.show_page(found_files)
-    elif page == "TARGET 대비 CAPA 분석":
-        target_capa.show_page(found_files)
-    else:
-        st.error("parquet 파일이 필요합니다.")
+            # 페이지 선택
+            st.sidebar.subheader("페이지 선택")
+            page = st.sidebar.radio(
+                "페이지를 선택하세요",
+                ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석"]
+            )
 
+            # 페이지 라우팅
+            if page == "DEMAND_QTY 분석":
+                demand.show_page(found_files)
+            elif page == "장비 그룹별 가동율 현황":
+                group_rate.show_page(found_files)
+            elif page == "장비 그룹별 개별 가동율 현황":
+                equipment.show_page(found_files)
+            elif page == "TARGET 대비 CAPA 분석":
+                target_capa.show_page(found_files)
 else:
     st.warning("ZIP 파일을 업로드하세요.")
