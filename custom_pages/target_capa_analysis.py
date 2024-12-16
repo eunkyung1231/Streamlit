@@ -3,19 +3,23 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-def show_page():
+def show_page(uploaded_files):
     st.title("TARGET 대비 CAPA 분석 - Operation 데이터 확인")
 
-    # 파일 경로 지정
-    target_plan_path = 'D:\Model\Production_SHINSUNG\P-20241211-M-02_Engine_20241211152108\Experiment 1\Result 0\TARGET_PLAN.parquet'
-    routing_oper_path = 'D:\Model\Production_SHINSUNG\P-20241211-M-02_Engine_20241211152108\Data\ROUTING_OPER.parquet'
-    oper_res_path = 'D:\Model\Production_SHINSUNG\P-20241211-M-02_Engine_20241211152108\Data\OPER_RES.parquet'
+    # 필수 파일 목록
+    required_files = ["TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet"]
+    missing_files = [f for f in required_files if f not in uploaded_files]
+
+    # 파일 누락 확인
+    if missing_files:
+        st.error(f"다음 파일이 누락되었습니다: {', '.join(missing_files)}")
+        return
 
     try:
-        # Parquet 파일 읽기
-        target_plan_df = pd.read_parquet(target_plan_path, engine='pyarrow')
-        routing_oper_df = pd.read_parquet(routing_oper_path, engine='pyarrow')
-        oper_res_df = pd.read_parquet(oper_res_path, engine='pyarrow')
+        # 업로드된 Parquet 파일 읽기
+        target_plan_df = pd.read_parquet(uploaded_files["TARGET_PLAN.parquet"], engine='pyarrow')
+        routing_oper_df = pd.read_parquet(uploaded_files["ROUTING_OPER.parquet"], engine='pyarrow')
+        oper_res_df = pd.read_parquet(uploaded_files["OPER_RES.parquet"], engine='pyarrow')
 
         # IN_OUT 컬럼 값 정리
         target_plan_df['IN_OUT'] = target_plan_df['IN_OUT'].str.strip()

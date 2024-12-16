@@ -2,20 +2,22 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import numpy as np
-import streamlit.components.v1 as components
 
-def show_page():
-    st.title("장비 그룹별 가동율 현황")
+def show_page(uploaded_files):
+    st.title("\ud56d\ube44 \uadf8\ub8f9\ubcc4 \uac00\ub3d9\c728 \ud604\ud669")
 
-    # Parquet 파일 경로 지정
+    # Parquet \ud30c\uc77c \uacbd\ub85c \uc9c0\uc815
     model_path = 'C:\\Users\\vms\\Downloads\\20241210-P-BOM2_Engine_20241210081853\\Experiment 1\\Result 0\\'
     file_path = 'CAPA_ALLOCATION_INFO.parquet'
 
-    # Parquet 파일 읽기
+    # Parquet \ud30c\uc77c \uc77d\uae30
     df = pd.read_parquet(model_path + file_path, engine='pyarrow')
 
-    # 조건 필터링 및 그룹화 로직 (공통 함수)
+    # \uc870\uac74 \ud544\ud130\ub9c1 \ubc0f \uadf8\ub8f9\ud654 \ub85c\uc9d1 (\uacf5\ud1b5 \ud568\uc218)
     def process_data(df_filtered):
+        if df_filtered.empty:  # \ud544\ud130\ub9c1\ub41c \ub370\uc774\ud130\uac00 \uc5c6\ub294 \uacbd\uc6b0
+            return pd.DataFrame()  # \ube48 \ub370\uc774\ud130\ud504\ub9ac\uc784 \ubc18\ud658
+
         grouped = df_filtered.groupby('RES_GROUP_ID').agg({
             'TOTAL_CAPA': 'sum',
             'OFF_TIME_CAPA': 'sum',
@@ -25,20 +27,23 @@ def show_page():
             'REMAIN_CAPA': 'sum'
         }).reset_index()
 
-        # 비율 계산
+        if grouped.empty:  # \uadf8\ub8f9\ud654 \uacb0\uacfc\uac00 \ube48 \uacbd\uc6b0
+            return pd.DataFrame()
+
+        # \ube44\uc728 \uacc4\uc0b0
         grouped['OFF_TIME_CAPA_%'] = (grouped['OFF_TIME_CAPA'] / grouped['TOTAL_CAPA']) * 100
         grouped['ALLOCATION_CAPA_%'] = (grouped['ALLOCATION_CAPA'] / grouped['TOTAL_CAPA']) * 100
         grouped['PM_CAPA_%'] = (grouped['PM_CAPA'] / grouped['TOTAL_CAPA']) * 100
         grouped['SETUP_CAPA_%'] = (grouped['SETUP_CAPA'] / grouped['TOTAL_CAPA']) * 100
         grouped['REMAIN_CAPA_%'] = (grouped['REMAIN_CAPA'] / grouped['TOTAL_CAPA']) * 100
 
-        # Allocation_capa 퍼센테이지 기준으로 정렬
+        # Allocation_capa \ud37c\uc13c\ud2f0\uc9c0 \uae30\uc900\uc73c\ub85c \uc815\ub82c
         grouped = grouped.sort_values(by='ALLOCATION_CAPA_%', ascending=False)
 
-        # X축 레이블: RES_GROUP_ID만 표시
+        # X\uc축 \ub808\uc774\ube14: RES_GROUP_ID\ub9cc \ud45c\uc2dc
         grouped['X_LABEL'] = grouped['RES_GROUP_ID']
 
-        # customdata에 비율 값, 원래 값, 기준값 추가 (3차원 배열로)
+        # customdata \uc0dd\uc131
         grouped['customdata'] = grouped.apply(
             lambda row: [
                 (row['ALLOCATION_CAPA_%'], row['ALLOCATION_CAPA'], row['TOTAL_CAPA']),
@@ -50,10 +55,13 @@ def show_page():
             axis=1
         )
         return grouped
-    
 
-    # X축 스크롤을 조건적으로 활성화하는 함수
+    # X\uc축 \uc2a4\ud06c\ub864 \ubaa8\ub4dc \ud65c\uc131\ud654 \ud568\uc218
     def create_chart(grouped, title):
+        if grouped.empty:  # \ub370\uc774\ud130\ud504\ub9ac\uc784\uc774 \ube48 \uacbd\uc6b0
+            st.warning(f"{title} \uc5d0 \ub300\ud55c \ub370\uc774\ud130\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.")
+            return None
+
         categories = ['Allocation_capa', 'Setup_capa', 'Pm_capa', 'Off_time_capa', 'Remain_capa']
         colors = ['#66CC66', '#FF6666', '#FFE066', '#808080', '#F2F2F2']
         fig = go.Figure()
@@ -65,64 +73,44 @@ def show_page():
                     y=grouped[f'{category.upper()}_%'],
                     name=category.capitalize(),
                     marker_color=color,
-                    customdata=np.stack(grouped['customdata'].to_numpy()),  # customdata를 2차원 배열로 전달
+                    customdata=np.stack(grouped['customdata'].to_numpy()),
                     hovertemplate=(f"{category.capitalize()}: %{{customdata[{i}][0]:.2f}}% "
-                                f"(%{{customdata[{i}][1]:,.0f}}/%{{customdata[{i}][2]:,.0f}})<extra></extra>")
+                                   f"(%{{customdata[{i}][1]:,.0f}}/%{{customdata[{i}][2]:,.0f}})<extra></extra>")
                 )
             )
 
-        # X축 범위를 조건적으로 설정
-        if len(grouped['X_LABEL']) > 10:  # 10개 초과일 경우
-            fig.update_layout(
-                xaxis=dict(
-                    title="장비 그룹 (RES_GROUP_ID)",
-                    tickangle=45,  # x축 라벨 각도
-                    automargin=True,  # 여백 자동 조정
-                    range=[-0.5, 9.5],  # 처음 10개만 표시
-                    fixedrange=False,  # 확대/축소 가능
-                )
-            )
-        else:  # 10개 이하일 경우 (스크롤 및 확대/축소 비활성화)
-            fig.update_layout(
-                xaxis=dict(
-                    title="장비 그룹 (RES_GROUP_ID)",
-                    tickangle=45,  # x축 라벨 각도
-                    automargin=True,  # 여백 자동 조정
-                    fixedrange=True,  # 스크롤 및 확대/축소 비활성화
-                )
-            )
-
-        # 그래프 레이아웃 설정
         fig.update_layout(
             title=title,
-            yaxis_title="백분율 (%)",
-            barmode='stack',  # 스택형 막대 그래프
-            template="plotly_white",
-            hovermode="x unified",  # 마우스 오버 시 모든 데이터 표시
-            margin=dict(l=10, r=10, t=30, b=70),  # 마진 조정
+            xaxis=dict(title="\uc7a5\ube44 \uadf8\ub8f9 (RES_GROUP_ID)", tickangle=45),
+            yaxis_title="\ubc31\ubd84\uc728 (%)",
+            barmode='stack',
+            hovermode="x unified",
+            margin=dict(l=10, r=10, t=30, b=70),
         )
         return fig
 
-    # Time 데이터 차트 생성
+    # \ub370\uc774\ud130 \ud544\ud130\ub9c1 \ubc0f \ucc44\ud305
     df_time = df[(df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Time')]
     grouped_time = process_data(df_time)
-    fig_time = create_chart(grouped_time, "RES_GROUP_ID별 CAPA Distribution (Time)")
 
-    # Quantity 데이터 차트 생성
     df_quantity = df[(df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Quantity')]
     grouped_quantity = process_data(df_quantity)
-    fig_quantity = create_chart(grouped_quantity, "RES_GROUP_ID별 CAPA Distribution (Quantity)")
 
-    # AddResource + Time 데이터 차트 생성
     df_addresource_time = df[(df['TARGET_TYPE'] == 'AddResource') & (df['CAPA_TYPE'] == 'Time')]
     grouped_addresource_time = process_data(df_addresource_time)
-    fig_addresource_time = create_chart(grouped_addresource_time, "RES_GROUP_ID별 CAPA Distribution (AddResource + Time)")
 
-    # 그래프 출력
-    st.plotly_chart(fig_time, use_container_width=True)
-    st.plotly_chart(fig_quantity, use_container_width=True)
-    st.plotly_chart(fig_addresource_time, use_container_width=True)
+    # \uadf8\ub798\ud504 \uc0dd\uc131 \ubc0f \ud45c\uc2dc
+    fig_time = create_chart(grouped_time, "RES_GROUP_ID\ubcc4 CAPA Distribution (Time)")
+    if fig_time:
+        st.plotly_chart(fig_time, use_container_width=True)
 
-# 실행
+    fig_quantity = create_chart(grouped_quantity, "RES_GROUP_ID\ubcc4 CAPA Distribution (Quantity)")
+    if fig_quantity:
+        st.plotly_chart(fig_quantity, use_container_width=True)
+
+    fig_addresource_time = create_chart(grouped_addresource_time, "RES_GROUP_ID\ubcc4 CAPA Distribution (AddResource + Time)")
+    if fig_addresource_time:
+        st.plotly_chart(fig_addresource_time, use_container_width=True)
+
 if __name__ == "__main__":
     show_page()
