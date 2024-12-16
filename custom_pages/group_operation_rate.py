@@ -6,12 +6,13 @@ import numpy as np
 def show_page(uploaded_files):
     st.title("장비 그룹별 가동율 현황")
 
-    # Parquet 파일 경로 지정
-    model_path = 'C:\\Users\\vms\\Downloads\\20241210-P-BOM2_Engine_20241210081853\\Experiment 1\\Result 0\\'
-    file_path = 'CAPA_ALLOCATION_INFO.parquet'
+    # 파일 검사
+    if "CAPA_ALLOCATION_INFO.parquet" not in uploaded_files:
+        st.error("CAPA_ALLOCATION_INFO.parquet 파일이 업로드되지 않았습니다.")
+        return
 
     # Parquet 파일 읽기
-    df = pd.read_parquet(model_path + file_path, engine='pyarrow')
+    df = pd.read_parquet(uploaded_files["CAPA_ALLOCATION_INFO.parquet"], engine='pyarrow')
 
     # 조건 필터링 및 그룹화 로직 (공통 함수)
     def process_data(df_filtered):
