@@ -31,18 +31,10 @@ def show_page(found_files):
     # 선택한 OPER_ID로 필터링
     filtered_df = filtered_df[filtered_df['OPER_ID'] == selected_oper_id]
 
-    # 전체 날짜 범위 사용 (df의 PLAN_DATE 기준)
-    date_range = pd.DataFrame({'PLAN_DATE': pd.date_range(df['PLAN_DATE'].min(), 
-                                                          df['PLAN_DATE'].max(), freq='D')})
-    
-    # 일별 그룹화 - 누락된 날짜 채우기
+    # 일별 그룹화 - PLAN_DATE에 있는 날짜만 사용
     daily_df = filtered_df.groupby(['PLAN_DATE'], as_index=False)['PLAN_QTY'].sum()
-    
-    # 누락된 날짜에 대해 PLAN_QTY를 0으로 채우고 OPER_ID 추가
-    daily_df = pd.merge(date_range, daily_df, on='PLAN_DATE', how='left').fillna({'PLAN_QTY': 0})
     daily_df['OPER_ID'] = selected_oper_id
     daily_df = daily_df[['PLAN_DATE', 'OPER_ID', 'PLAN_QTY']]  # 컬럼 순서 조정
-
 
     # 주별 그룹화
     filtered_df['WEEK'] = filtered_df['PLAN_DATE'].dt.to_period('W').dt.start_time
@@ -66,7 +58,26 @@ def show_page(found_files):
         title="일별 생산량",
         labels={"PLAN_QTY": "생산량", "PLAN_DATE": "날짜"}
     )
-    fig_daily.update_xaxes(dtick="D1", tickformat="%Y-%m-%d")  # 날짜가 하루씩 표시되도록 설정
+
+    # X축 조건: 20개씩 스크롤되면서 각 막대에 모든 날짜 표시
+    if len(daily_df['PLAN_DATE']) > 20:
+        fig_daily.update_layout(
+            xaxis=dict(
+                tickmode='linear',
+                dtick=86400000.0,  # 하루 단위(ms 기준)
+                tickformat="%Y-%m-%d",
+                range=[daily_df['PLAN_DATE'].iloc[0], daily_df['PLAN_DATE'].iloc[19]],
+                fixedrange=False  # 스크롤 가능
+            )
+        )
+    else:
+        fig_daily.update_xaxes(
+            tickmode='linear',
+            dtick=86400000.0,  # 하루 단위
+            tickformat="%Y-%m-%d",
+            fixedrange=True
+        )
+
     st.plotly_chart(fig_daily, use_container_width=True)
 
     # 시각화: 주별 그래프
