@@ -6,6 +6,7 @@ import custom_pages.demand_analysis as demand
 import custom_pages.equipment_detail as equipment
 import custom_pages.group_operation_rate as group_rate
 import custom_pages.target_capa_analysis as target_capa
+import custom_pages.process_output_summary as process_output
 
 def find_parquet_files(base_dir, required_files):
     """재귀적으로 폴더를 탐색하며 필요한 파일을 찾는 함수"""
@@ -32,7 +33,7 @@ folder_data = st.session_state.get('folder_data', {})
 # Streamlit UI
 st.sidebar.header("폴더 경로 관리")
 new_folder = st.sidebar.text_input("새로운 폴더 경로 추가")
-new_name = st.sidebar.text_input("폴더 이름 지정")
+new_name = st.sidebar.text_input("버전 이름 지정")
 
 if st.sidebar.button("폴더 추가"):
     if new_folder and os.path.exists(new_folder):
@@ -48,7 +49,7 @@ if st.sidebar.button("폴더 추가"):
 
 # 등록된 폴더 경로 목록 표시
 if folder_data:
-    selected_name = st.sidebar.selectbox("폴더를 선택하세요", list(folder_data.keys()))
+    selected_name = st.sidebar.selectbox("버전을 선택하세요", list(folder_data.keys()))
     selected_folder = folder_data[selected_name]
 
     # ZIP 파일 생성 버튼
@@ -66,7 +67,7 @@ if folder_data:
     # 필요한 파일 정의
     required_files = [
         "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet",
-        "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet"
+        "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet", "RES_PLAN.parquet"
     ]
     found_files = find_parquet_files(selected_folder, required_files)
 
@@ -74,7 +75,7 @@ if folder_data:
     st.sidebar.subheader("페이지 선택")
     page = st.sidebar.radio(
         "페이지를 선택하세요",
-        ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석"]
+        ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석", "공정별 생산량 분석"]
     )
 
     # 페이지 라우팅
@@ -86,5 +87,7 @@ if folder_data:
         equipment.show_page(found_files)
     elif page == "TARGET 대비 CAPA 분석":
         target_capa.show_page(found_files)
+    elif page == "공정별 생산량 분석":
+        process_output.show_page(found_files)
 else:
     st.warning("폴더 경로를 추가하세요.")
