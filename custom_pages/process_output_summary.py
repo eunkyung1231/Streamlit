@@ -16,6 +16,9 @@ def show_page(found_files):
     file_path = found_files["RES_PLAN.parquet"]
     df = pd.read_parquet(file_path, engine="pyarrow")
 
+    # MAIN_RES_ID와 RES_ID가 같은 행만 필터링
+    df = df[df['MAIN_RES_ID'] == df['RES_ID']]
+
     # 필터링 조건 적용
     filtered_df = df[
         (df['ALLOCATION_TYPE'] == 'Allocate') & 
@@ -80,14 +83,14 @@ def show_page(found_files):
         yaxis=dict(
             title="생산량",
             side="left",
-            tickformat=",.0f",  # 천 단위 콤마 표시
+            tickformat=".0f",  # 천 단위 콤마 표시 및 소수점 제거
         ),
         yaxis2=dict(
             title="누적 생산량",
             overlaying='y',
             side="right",
             showgrid=False,
-            tickformat=".2s",  # k 단위로 표시
+            tickformat=".0s",  # k 단위로 표시, 소수점 제거
             dtick=100000  # 100k 단위 설정
         ),
         xaxis=dict(
@@ -129,14 +132,14 @@ def show_page(found_files):
         yaxis=dict(
             title="생산량",
             side="left",
-            tickformat=",.0f",  # 천 단위 콤마 표시
+            tickformat=".0f",  # 천 단위 콤마 표시 및 소수점 제거
         ),
         yaxis2=dict(
             title="누적 생산량",
             overlaying='y',
             side="right",
             showgrid=False,
-            tickformat=".2s",  # k 단위로 표시
+            tickformat=".0s",  # k 단위로 표시, 소수점 제거
             dtick=100000  # 100k 단위 설정
         ),
         legend=dict(x=0, y=1.1)
@@ -170,14 +173,14 @@ def show_page(found_files):
         yaxis=dict(
             title="생산량",
             side="left",
-            tickformat=",.0f",  # 천 단위 콤마 표시
+            tickformat=".0f",  # 천 단위 콤마 표시 및 소수점 제거
         ),
         yaxis2=dict(
             title="누적 생산량",
             overlaying='y',
             side="right",
             showgrid=False,
-            tickformat=".2s",  # k 단위로 표시
+            tickformat=".0s",  # k 단위로 표시, 소수점 제거
             dtick=100000  # 100k 단위 설정
         ),
         legend=dict(x=0, y=1.1)
