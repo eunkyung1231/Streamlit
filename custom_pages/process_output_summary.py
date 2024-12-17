@@ -36,12 +36,12 @@ def show_page(found_files):
     daily_df['OPER_ID'] = selected_oper_id
     daily_df = daily_df[['PLAN_DATE', 'OPER_ID', 'PLAN_QTY']]  # 컬럼 순서 조정
 
-    # 주별 그룹화
-    filtered_df['WEEK'] = filtered_df['PLAN_DATE'].dt.to_period('W').dt.start_time
+    # 주별 그룹화 (yyyy-mm 형식으로 포맷)
+    filtered_df['WEEK'] = filtered_df['PLAN_DATE'].dt.to_period('W').astype(str)
     weekly_df = filtered_df.groupby(['WEEK'], as_index=False)['PLAN_QTY'].sum()
 
-    # 월별 그룹화
-    filtered_df['MONTH'] = filtered_df['PLAN_DATE'].dt.to_period('M').astype(str)  # YYYY-MM 형식
+    # 월별 그룹화 (yyyy-mm 형식)
+    filtered_df['MONTH'] = filtered_df['PLAN_DATE'].dt.to_period('M').astype(str)
     monthly_df = filtered_df.groupby(['MONTH'], as_index=False)['PLAN_QTY'].sum()
 
     # 결과 표시
@@ -87,8 +87,9 @@ def show_page(found_files):
         x='WEEK',
         y='PLAN_QTY',
         title="주별 생산량",
-        labels={"PLAN_QTY": "생산량", "WEEK": "주"}
+        labels={"PLAN_QTY": "생산량", "WEEK": "주 (yyyy-mm)"}
     )
+    fig_weekly.update_xaxes(type='category')  # X축 항목을 명확하게 문자열로 처리
     st.plotly_chart(fig_weekly, use_container_width=True)
 
     # 시각화: 월별 그래프
@@ -98,9 +99,11 @@ def show_page(found_files):
         x='MONTH',
         y='PLAN_QTY',
         title="월별 생산량",
-        labels={"PLAN_QTY": "생산량", "MONTH": "월"}
+        labels={"PLAN_QTY": "생산량", "MONTH": "월 (yyyy-mm)"}
     )
+    fig_monthly.update_xaxes(type='category')  # X축 항목을 명확하게 문자열로 처리
     st.plotly_chart(fig_monthly, use_container_width=True)
+
 
 if __name__ == "__main__":
     show_page({"RES_PLAN.parquet": "path/to/RES_PLAN.parquet"})
