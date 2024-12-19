@@ -30,8 +30,6 @@ def show_page(uploaded_files):
             target_plan_df['ROUTING_ID'].notnull() & (target_plan_df['ROUTING_ID'] != "") &
             target_plan_df['OPER_ID'].notnull() & (target_plan_df['OPER_ID'] != "")
         ]
-        with st.expander(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아닌 행 수: {valid_out_df.shape[0]}"):
-            st.write(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아닌 행 수: {valid_out_df.shape[0]}")
 
         # ROUTING_ID와 OPER_ID를 키로 ROUTING_OPER 테이블에서 데이터 찾기
         merged_data = valid_out_df.merge(
@@ -42,8 +40,6 @@ def show_page(uploaded_files):
 
         # OPER_TYPE이 'Operation'인 행 필터링
         operation_rows = merged_data[merged_data['OPER_TYPE'] == 'Operation']
-        with st.expander(f"IN_OUT == 'Out' 이고 ROUTING_ID 및 OPER_ID가 빈값이 아니고 OPER_TYPE == 'Operation' 인 데이터 (총 {operation_rows.shape[0]} 행)"):
-            st.dataframe(operation_rows.reset_index(drop=True))
 
         # ITEM_ID, ROUTING_ID와 OPER_ID를 그룹으로 TARGET_QTY의 합 계산
         grouped_data = operation_rows.groupby(['ITEM_ID', 'ROUTING_ID', 'OPER_ID'])['TARGET_QTY'].sum().reset_index()

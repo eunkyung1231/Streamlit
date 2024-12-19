@@ -7,12 +7,16 @@ def show_page(uploaded_files):
     st.title("장비 그룹별 개별 가동율 현황")
 
     # 파일 검사
-    if "CAPA_ALLOCATION_INFO.parquet" not in uploaded_files:
-        st.error("CAPA_ALLOCATION_INFO.parquet 파일이 업로드되지 않았습니다.")
+    if "CAPA_ALLOCATION_INFO.parquet" not in uploaded_files or "RES_MASTER.parquet" not in uploaded_files:
+        st.error("CAPA_ALLOCATION_INFO.parquet와 RES_MASTER.parquet 파일이 모두 필요합니다.")
         return
 
     # Parquet 파일 읽기
     df = pd.read_parquet(uploaded_files["CAPA_ALLOCATION_INFO.parquet"], engine='pyarrow')
+    res_master = pd.read_parquet(uploaded_files["RES_MASTER.parquet"], engine='pyarrow')
+
+    # RES_MASTER 테이블에서 RES_ID와 RES_NAME 가져오기
+    res_master = res_master[["RES_ID", "RES_NAME"]]
 
     # 데이터 처리 공통 함수
     def process_data(df_filtered, group_col):
@@ -43,25 +47,10 @@ def show_page(uploaded_files):
             ], axis=1
         )
 
-        # 원본 컬럼 (TARGET_TYPE, CAPA_TYPE) 추가
-        grouped = pd.merge(grouped, df_filtered[[group_col, 'TARGET_TYPE', 'CAPA_TYPE']].drop_duplicates(), 
-                           on=group_col, how='left')
-
-        # ALLOCATION_CAPA_% 순서로 정렬
+        # ALLOCATION_CAPA_% 기준으로 데이터 정렬
         grouped = grouped.sort_values(by='ALLOCATION_CAPA_%', ascending=False)
-        return grouped
 
-    # 드롭박스에 표시될 RES_GROUP_ID 순서 지정
-    def reorder_dropdown(df):
-        if 'TARGET_TYPE' in df.columns and 'CAPA_TYPE' in df.columns:
-            # 조건에 따라 우선순위 컬럼 생성
-            df['priority'] = np.where(
-                (df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Time'), 1,
-                np.where((df['TARGET_TYPE'] == 'Resource') & (df['CAPA_TYPE'] == 'Quantity'), 2, 3)
-            )
-            # 우선순위와 RES_GROUP_ID를 기준으로 정렬
-            df = df.sort_values(by=['priority', 'RES_GROUP_ID'])
-        return df
+        return grouped
 
     # 그래프 생성 함수
     def create_chart(grouped, group_col, title):
@@ -117,16 +106,23 @@ def show_page(uploaded_files):
 
     # 데이터 처리 및 RES_GROUP_ID별 선택
     grouped_time = process_data(df, 'RES_GROUP_ID')
-    grouped_time = reorder_dropdown(grouped_time)  # RES_GROUP_ID 순서 재정렬
     selected_group = st.selectbox("세부 그래프를 볼 RES_GROUP_ID를 선택하세요:", grouped_time['RES_GROUP_ID'])
 
     if selected_group:
         st.subheader(f"선택된 RES_GROUP_ID: {selected_group}")
         df_target = df[df['RES_GROUP_ID'] == selected_group]
-        grouped_target = process_data(df_target, 'TARGET_ID')
-        fig_target = create_chart(grouped_target, 'TARGET_ID', f"TARGET_ID별 CAPA Distribution ({selected_group})")
+
+        # TARGET_ID와 RES_MASTER 테이블 연결하여 RES_NAME + '_' + TARGET_ID 생성
+        df_target = pd.merge(df_target, res_master, left_on='TARGET_ID', right_on='RES_ID', how='left')
+        df_target['RES_NAME+RES_ID'] = df_target['RES_NAME'].fillna('Unknown') + '_' + df_target['TARGET_ID']
+
+        grouped_target = process_data(df_target, 'RES_NAME+RES_ID')
+        fig_target = create_chart(grouped_target, 'RES_NAME+RES_ID', f"TARGET_ID별 CAPA Distribution ({selected_group})")
         st.plotly_chart(fig_target, use_container_width=True)
 
 if __name__ == "__main__":
-    uploaded_files = {"CAPA_ALLOCATION_INFO.parquet": "D:/path/to/CAPA_ALLOCATION_INFO.parquet"}
+    uploaded_files = {
+        "CAPA_ALLOCATION_INFO.parquet": "D:/path/to/CAPA_ALLOCATION_INFO.parquet",
+        "RES_MASTER.parquet": "D:/path/to/RES_MASTER.parquet"
+    }
     show_page(uploaded_files)
