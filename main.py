@@ -7,6 +7,7 @@ import custom_pages.equipment_detail as equipment
 import custom_pages.group_operation_rate as group_rate
 import custom_pages.target_capa_analysis as target_capa
 import custom_pages.process_output_summary as process_output
+import custom_pages.short_log_analysis as short_log
 
 def find_parquet_files(base_dir, required_files):
     """재귀적으로 폴더를 탐색하며 필요한 파일을 찾는 함수"""
@@ -66,8 +67,8 @@ if folder_data:
 
     # 필요한 파일 정의
     required_files = [
-        "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet",
-        "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet", "RES_PLAN.parquet", "RES_MASTER.parquet"
+        "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet",
+        "CAPA_ALLOCATION_INFO.parquet", "RES_PLAN.parquet", "RES_MASTER.parquet", "SHORT_LOG.parquet"
     ]
     found_files = find_parquet_files(selected_folder, required_files)
 
@@ -75,7 +76,7 @@ if folder_data:
     st.sidebar.subheader("페이지 선택")
     page = st.sidebar.radio(
         "페이지를 선택하세요",
-        ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석", "공정별 생산량 분석"]
+        ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석", "공정별 생산량 분석", "SHORT LOG 분석"]
     )
 
     # 페이지 라우팅
@@ -89,5 +90,7 @@ if folder_data:
         target_capa.show_page(found_files)
     elif page == "공정별 생산량 분석":
         process_output.show_page(found_files)
+    elif page == "SHORT LOG 분석":
+        short_log.show_page(found_files)
 else:
     st.warning("폴더 경로를 추가하세요.")
