@@ -67,8 +67,8 @@ if folder_data:
 
     # 필요한 파일 정의
     required_files = [
-        "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet",
-        "CAPA_ALLOCATION_INFO.parquet", "RES_PLAN.parquet", "RES_MASTER.parquet", "SHORT_LOG.parquet"
+        "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet",
+         "RES_PLAN.parquet", "RES_MASTER.parquet", "SHORT_LOG.parquet", "ERROR_LOG.parquet", "SHIPMENT_PLAN.parquet"
     ]
     found_files = find_parquet_files(selected_folder, required_files)
 
