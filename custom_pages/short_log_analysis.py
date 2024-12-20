@@ -20,10 +20,7 @@ def show_page(uploaded_files):
 
     # SHORT_LOG 데이터 처리
     filtered_df = short_log[short_log['SHORT_REASON'] == 'NoOpResourceInfo']
-    with st.expander("할 수 있는 설비가 없는 DEMAND_ITEM_ID 목록"):
-        st.dataframe(filtered_df[['SHORT_REASON'] + [col for col in filtered_df.columns if col != 'SHORT_REASON']])
-        unique_demand_items = filtered_df[['DEMAND_ID', 'DEMAND_ITEM_ID']].drop_duplicates().reset_index(drop=True)
-        st.dataframe(unique_demand_items)
+    unique_demand_items = filtered_df[['DEMAND_ID', 'DEMAND_ITEM_ID']].drop_duplicates().reset_index(drop=True)
 
     # DEMAND_ID와 OPER_ID 매핑
     demand_oper_mapping = filtered_df[['DEMAND_ID', 'OPER_ID']].drop_duplicates()
@@ -40,13 +37,41 @@ def show_page(uploaded_files):
     merged_df = pd.merge(demand, shipment_grouped, on="DEMAND_ID", how="left")
     merged_df["SHORT_QTY"] = merged_df["DEMAND_QTY"] - merged_df["TOTAL_QTY"].fillna(0)
 
-    # REASON 업데이트 (SHORT_QTY > 0인 경우에만 적용)
-    demand_oper_mapping_dict = dict(zip(demand_oper_mapping["DEMAND_ID"], demand_oper_mapping["OPER_ID"]))
+    # 첫 번째 조건: SHORT_QTY > 0이고 SHORT_REASON이 NoOpResourceInfo인 경우
+    no_op_resource_info_ids = set(short_log[short_log["SHORT_REASON"] == "NoOpResourceInfo"]["DEMAND_ID"])
     merged_df["REASON"] = merged_df.apply(
-        lambda row: f"{demand_oper_mapping_dict[row['DEMAND_ID']]} 공정에서 사용 할 수 있는 설비가 없음"
-        if row["SHORT_QTY"] > 0 and row["DEMAND_ID"] in demand_oper_mapping_dict else "",
+        lambda row: f"{short_log.loc[short_log['DEMAND_ID'] == row['DEMAND_ID'], 'OPER_ID'].iloc[0]} 공정에서 사용 할 수 있는 설비가 없음"
+        if row["SHORT_QTY"] > 0 and row["DEMAND_ID"] in no_op_resource_info_ids else "",
         axis=1
     )
+
+    # 두 번째 조건: SHORT_QTY > 0이고 REASON이 빈 값이며 SHORT_LOG에서 SHORT_REASON이 NoBwBomPathShort
+    no_reason_df = merged_df[(merged_df["SHORT_QTY"] > 0) & (merged_df["REASON"] == "")]
+    short_log_mapping = short_log[short_log["SHORT_REASON"] == "NoBwBomPathShort"]
+    bom_issue_ids = set(short_log_mapping["DEMAND_ID"])
+    merged_df.loc[
+        (merged_df["DEMAND_ID"].isin(bom_issue_ids)) & (merged_df["SHORT_QTY"] > 0) & (merged_df["REASON"] == ""),
+        "REASON"
+    ] = "투입까지 전개할 수 있는 BOM 정보가 없음"
+
+    # 세 번째 조건: SHORT_QTY > 0이고 REASON이 빈 값이며 SHORT_LOG에서 SHORT_REASON이 LackOfResourceCapacity
+    lack_of_capacity_mapping = short_log[short_log["SHORT_REASON"] == "LackOfResourceCapacity"]
+    capacity_issue_ids = set(lack_of_capacity_mapping["DEMAND_ID"])
+    merged_df.loc[
+        (merged_df["DEMAND_ID"].isin(capacity_issue_ids)) & (merged_df["SHORT_QTY"] > 0) & (merged_df["REASON"] == ""),
+        "REASON"
+    ] = merged_df.loc[
+        (merged_df["DEMAND_ID"].isin(capacity_issue_ids)) & (merged_df["SHORT_QTY"] > 0) & (merged_df["REASON"] == ""),
+        "DEMAND_ID"
+    ].apply(lambda x: f"{short_log.loc[short_log['DEMAND_ID'] == x, 'OPER_ID'].iloc[0]} 공정에서 사용할 수 있는 설비 Capa가 부족" if x in short_log["DEMAND_ID"].values else "Unknown")
+
+    # 네 번째 조건: SHORT_QTY > 0이고 REASON이 빈 값이며 SHORT_LOG에서 SHORT_REASON이 RemainingLots
+    remaining_lots_mapping = short_log[short_log["SHORT_REASON"] == "RemainingLots"]
+    remaining_lots_ids = set(remaining_lots_mapping["DEMAND_ID"])
+    merged_df.loc[
+        (merged_df["DEMAND_ID"].isin(remaining_lots_ids)) & (merged_df["SHORT_QTY"] > 0) & (merged_df["REASON"] == ""),
+        "REASON"
+    ] = "계획 생성 기간 내에 생산하지 못한 잔여 수량임. (계획 생성 기간을 늘릴 경우 생산할 수 있는 가능성이 있음.)"
 
     # 컬럼 재정렬
     demand_columns = list(demand.columns)
@@ -54,7 +79,7 @@ def show_page(uploaded_files):
     merged_df = merged_df[new_columns]
 
     # 결과 출력
-    st.subheader("DEMAND 테이블 및 SHORT_QTY 계산 결과")
+    st.subheader("SHORT_QTY 계산 결과 및 REASON 분석")
     st.dataframe(merged_df)
 
 if __name__ == "__main__":
