@@ -1,5 +1,8 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import plotly.express as px
+
 
 def load_parquet(file_name, uploaded_files):
     if file_name not in uploaded_files:
@@ -82,6 +85,39 @@ def show_page(uploaded_files):
     # 결과 출력
     st.subheader("SHORT_QTY 계산 결과 및 REASON 분석")
     st.dataframe(merged_df)
+
+    # 데이터 준비
+    pie_data = merged_df[["ON_TIME_QTY", "LATE_QTY", "SHORT_QTY"]].sum()
+
+    # 데이터프레임 생성 (Plotly 입력용)
+    pie_chart_data = pd.DataFrame({
+        "Category": ["ON_TIME_QTY", "LATE_QTY", "SHORT_QTY"],
+        "Value": pie_data
+    })
+
+    # 파이차트 생성
+    fig = px.pie(
+        pie_chart_data,
+        names="Category",
+        values="Value",
+        color="Category",
+        color_discrete_map={
+            "ON_TIME_QTY": "#48C2B0",  
+            "LATE_QTY": "#F8A076",   
+            "SHORT_QTY": "#D85F6B"  
+        },
+        title="DEMAND_QTY 구성 비율 분석",
+        hole=0.4  # 도넛 형태로 표시
+    )
+
+    # 툴팁 커스터마이징 (소수점 없이 반올림 처리)
+    fig.update_traces(
+        hovertemplate="<b>%{label}</b>: %{value:,.0f} (%{percent:.1%})",  # .0f는 정수로 표시
+        textinfo="percent"  # 차트에는 퍼센트만 표시
+    )
+
+    # Streamlit에서 차트 표시
+    st.plotly_chart(fig)
 
 if __name__ == "__main__":
     uploaded_files = {
