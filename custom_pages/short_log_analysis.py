@@ -35,6 +35,7 @@ def show_page(uploaded_files):
 
     # DEMAND 데이터와 결합
     merged_df = pd.merge(demand, shipment_grouped, on="DEMAND_ID", how="left")
+    merged_df = pd.merge(merged_df, short_log[['DEMAND_ID', 'SHORT_REASON']], on="DEMAND_ID", how="left")
     merged_df["SHORT_QTY"] = merged_df["DEMAND_QTY"] - merged_df["TOTAL_QTY"].fillna(0)
 
     # 첫 번째 조건: SHORT_QTY > 0이고 SHORT_REASON이 NoOpResourceInfo인 경우
@@ -75,7 +76,7 @@ def show_page(uploaded_files):
 
     # 컬럼 재정렬
     demand_columns = list(demand.columns)
-    new_columns = demand_columns[:demand_columns.index("DEMAND_QTY") + 1] + ["ON_TIME_QTY", "LATE_QTY", "SHORT_QTY", "REASON"] + demand_columns[demand_columns.index("DEMAND_QTY") + 1:]
+    new_columns = demand_columns[:demand_columns.index("DEMAND_QTY") + 1] + ["ON_TIME_QTY", "LATE_QTY", "SHORT_QTY", "SHORT_REASON", "REASON"] + demand_columns[demand_columns.index("DEMAND_QTY") + 1:]
     merged_df = merged_df[new_columns]
 
     # 결과 출력
