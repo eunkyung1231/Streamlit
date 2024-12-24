@@ -3,23 +3,26 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-
-def load_parquet(file_name, uploaded_files):
-    if file_name not in uploaded_files:
-        st.error(f"{file_name} 파일이 필요합니다.")
-        return None
-    return pd.read_parquet(uploaded_files[file_name], engine="pyarrow")
-
 def show_page(uploaded_files):
     st.title("SHORT LOG 분석")
 
-    # 파일 로드
-    short_log = load_parquet("SHORT_LOG.parquet", uploaded_files)
-    shipment_plan = load_parquet("SHIPMENT_PLAN.parquet", uploaded_files)
-    demand = load_parquet("DEMAND.parquet", uploaded_files)
-
-    if short_log is None or shipment_plan is None or demand is None:
+    # SHORT_LOG.parquet 파일 확인 및 읽기
+    if "SHORT_LOG.parquet" not in uploaded_files:
+        st.error("SHORT_LOG.parquet 파일이 필요합니다.")
         return
+    short_log = pd.read_parquet(uploaded_files["SHORT_LOG.parquet"], engine="pyarrow")
+
+    # SHIPMENT_PLAN.parquet 파일 확인 및 읽기
+    if "SHIPMENT_PLAN.parquet" not in uploaded_files:
+        st.error("SHIPMENT_PLAN.parquet 파일이 필요합니다.")
+        return
+    shipment_plan = pd.read_parquet(uploaded_files["SHIPMENT_PLAN.parquet"], engine="pyarrow")
+
+    # DEMAND.parquet 파일 확인 및 읽기
+    if "DEMAND.parquet" not in uploaded_files:
+        st.error("DEMAND.parquet 파일이 필요합니다.")
+        return
+    demand = pd.read_parquet(uploaded_files["DEMAND.parquet"], engine="pyarrow")
 
     # SHORT_LOG 데이터 처리
     filtered_df = short_log[short_log['SHORT_REASON'] == 'NoOpResourceInfo']
