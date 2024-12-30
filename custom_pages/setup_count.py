@@ -29,7 +29,7 @@ def process_res_plan(res, factory_start_time, calculated_time):
     # SHIFT 컬럼 추가
     def determine_shift(res_end_datetime):
         if factory_start_time and calculated_time:
-            if res_end_datetime.time() > factory_start_time and res_end_datetime.time() <= calculated_time:
+            if factory_start_time < res_end_datetime.time() <= calculated_time:
                 return "주간"
             elif res_end_datetime.time() > calculated_time or res_end_datetime.time() <= factory_start_time:
                 return "야간"
@@ -37,10 +37,10 @@ def process_res_plan(res, factory_start_time, calculated_time):
 
     res_filtered['SHIFT'] = res_filtered['RES_END_DATETIME'].apply(determine_shift)
 
-    # SHIFT별 횟수 계산
-    shift_counts = res_filtered.groupby(['RES_GROUP_ID', 'RES_ID', 'SHIFT']).size().reset_index(name='COUNT')
+    # PLAN_DATE와 SHIFT 추가 그룹화
+    grouped_with_plan_date = res_filtered.groupby(['RES_GROUP_ID', 'RES_ID', 'PLAN_DATE', 'SHIFT']).size().reset_index(name='COUNT')
 
-    return shift_counts
+    return grouped_with_plan_date
 
 def show_page(uploaded_files):
     st.title("설비별 Setup 횟수")
@@ -65,14 +65,14 @@ def show_page(uploaded_files):
     # FACTORY_START_TIME과 CALCULATED_TIME 표시
     st.subheader("Factory Config 시간 정보")
     st.write(f"FACTORY_START_TIME: {factory_start_time}")
-    st.write(f"SHIFT_TIME: {calculated_time}")
+    st.write(f"CALCULATED_TIME: {calculated_time}")
 
     # RES_PLAN 처리
-    shift_counts = process_res_plan(res, factory_start_time, calculated_time)
+    grouped_with_plan_date = process_res_plan(res, factory_start_time, calculated_time)
 
-    # 결과 표시
-    st.subheader("SHIFT별 횟수")
-    st.dataframe(shift_counts)
+    # PLAN_DATE와 SHIFT 추가 그룹화된 결과 표시
+    st.subheader("PLAN_DATE 기준 그룹화 결과")
+    st.dataframe(grouped_with_plan_date)
 
 if __name__ == "__main__":
     # 테스트용 경로를 여기에 추가하세요
