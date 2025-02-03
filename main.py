@@ -11,13 +11,14 @@ import custom_pages.short_log_analysis as short_log
 import custom_pages.isu_result_analysis as isu_result
 import custom_pages.setup_count_by_res as res_setup
 import custom_pages.setup_count_by_product as product_setup
+import custom_pages.equipment_wip as equipment_wip
 
-def find_parquet_files(base_dir, required_files):
-    """재귀적으로 폴더를 탐색하며 필요한 파일을 찾는 함수"""
+def find_all_parquet_files(base_dir):
+    """재귀적으로 폴더를 탐색하며 모든 .parquet 파일을 찾는 함수"""
     found_files = {}
     for root, _, files in os.walk(base_dir):
         for file in files:
-            if file in required_files:
+            if file.endswith(".parquet"):
                 found_files[file] = os.path.join(root, file)
     return found_files
 
@@ -68,19 +69,15 @@ if folder_data:
             mime="application/zip"
         )
 
-    # 필요한 파일 정의
-    required_files = [
-        "TARGET_PLAN.parquet", "ROUTING_OPER.parquet", "OPER_RES.parquet", "DEMAND.parquet", "CAPA_ALLOCATION_INFO.parquet",
-         "RES_PLAN.parquet", "RES_MASTER.parquet", "SHORT_LOG.parquet", "ERROR_LOG.parquet", "SHIPMENT_PLAN.parquet", "FACTORY_CONFIG.parquet"
-    ]
-    found_files = find_parquet_files(selected_folder, required_files)
+    # 모든 .parquet 파일 찾기
+    found_files = find_all_parquet_files(selected_folder)
 
     # 페이지 선택
     st.sidebar.subheader("페이지 선택")
     page = st.sidebar.radio(
         "페이지를 선택하세요",
         ["DEMAND_QTY 분석", "장비 그룹별 가동율 현황", "장비 그룹별 개별 가동율 현황", "TARGET 대비 CAPA 분석", "공정별 생산량 분석", "SHORT LOG 분석",
-         "Parquet 파일 비교 분석", "설비별 Setup 횟수", "제품별 Setup 횟수"]
+         "Parquet 파일 비교 분석", "설비별 Setup 횟수", "제품별 Setup 횟수", "설비 대기 ITEM별 재공 수량"]
     )
 
     # 페이지 라우팅
@@ -102,5 +99,7 @@ if folder_data:
         res_setup.show_page(found_files)
     elif page == "제품별 Setup 횟수":
         product_setup.show_page(found_files)
+    elif page == "설비 대기 ITEM별 재공 수량":
+        equipment_wip.show_page(found_files)
 else:
     st.warning("폴더 경로를 추가하세요.")
