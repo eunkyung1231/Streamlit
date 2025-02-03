@@ -41,12 +41,18 @@ def show_page(uploaded_files):
     merged_data = pd.merge(lot_grouped, res_grouped, left_on=["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID"],
                            right_on=["PLAN_DATE", "ITEM_ID", "BUFFER_ID"], how="left").fillna(0)
     merged_data["BALANCE_QTY"] = merged_data["LOT_QTY"] - merged_data["PLAN_QTY"]
-    merged_data = merged_data[["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID", "BALANCE_QTY"]]
+    merged_data = merged_data[["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID", "LOT_QTY", "PLAN_QTY", "BALANCE_QTY"]]
 
     # BUFFER_ID 기준으로 그룹화
-    buffer_grouped = merged_data.groupby(["EVENT_DATETIME", "BUFFER_ID"])["BALANCE_QTY"].sum().reset_index()
+    buffer_grouped = merged_data.groupby(["EVENT_DATETIME", "BUFFER_ID"])[["BALANCE_QTY"]].sum().reset_index()
 
     # 결과 출력
+    st.subheader("일별 ITEM별 재공 수량")
+    st.dataframe(lot_grouped)
+
+    st.subheader("일별 ITEM별 PLAN_QTY")
+    st.dataframe(res_grouped)
+
     st.subheader("BUFFER_ID별 일별 잔여 재공 수량")
     st.dataframe(buffer_grouped)
 
