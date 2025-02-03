@@ -40,11 +40,11 @@ def show_page(uploaded_files):
     # LOT_HISTORY와 RES_PLAN 데이터 병합 및 차이 계산
     merged_data = pd.merge(lot_grouped, res_grouped, left_on=["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID"],
                            right_on=["PLAN_DATE", "ITEM_ID", "BUFFER_ID"], how="left").fillna(0)
-    merged_data["BALANCE_QTY"] = merged_data["LOT_QTY"] - merged_data["PLAN_QTY"]
-    merged_data = merged_data[["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID", "LOT_QTY", "PLAN_QTY", "BALANCE_QTY"]]
+    merged_data["WAITING_WIP_QTY"] = merged_data["LOT_QTY"] - merged_data["PLAN_QTY"]
+    merged_data = merged_data[["EVENT_DATETIME", "ITEM_ID", "BUFFER_ID", "LOT_QTY", "PLAN_QTY", "WAITING_WIP_QTY"]]
 
-    # BUFFER_ID 기준으로 그룹화
-    buffer_grouped = merged_data.groupby(["EVENT_DATETIME", "BUFFER_ID"])[["BALANCE_QTY"]].sum().reset_index()
+    # BUFFER_ID와 ITEM_ID 기준으로 그룹화
+    buffer_grouped = merged_data.groupby(["EVENT_DATETIME", "BUFFER_ID", "ITEM_ID"])[["WAITING_WIP_QTY"]].sum().reset_index()
 
     # 결과 출력
     st.subheader("일별 ITEM별 재공 수량")
@@ -53,27 +53,27 @@ def show_page(uploaded_files):
     st.subheader("일별 ITEM별 PLAN_QTY")
     st.dataframe(res_grouped)
 
-    st.subheader("BUFFER_ID별 일별 잔여 재공 수량")
+    st.subheader("BUFFER_ID별 ITEM_ID별 일별 잔여 재공 수량")
     st.dataframe(buffer_grouped)
 
     # 시각화
-    st.subheader("📈 BUFFER_ID별 날짜별 재공 수량 변화")
+    st.subheader("📈 BUFFER_ID별 ITEM_ID별 날짜별 재공 수량 변화")
     fig = go.Figure()
 
-    for buffer_id in buffer_grouped["BUFFER_ID"].unique():
-        buffer_data = buffer_grouped[buffer_grouped["BUFFER_ID"] == buffer_id]
+    for (buffer_id, item_id) in buffer_grouped.groupby(["BUFFER_ID", "ITEM_ID"]).groups.keys():
+        buffer_data = buffer_grouped[(buffer_grouped["BUFFER_ID"] == buffer_id) & (buffer_grouped["ITEM_ID"] == item_id)]
         fig.add_trace(go.Scatter(
             x=buffer_data["EVENT_DATETIME"],
-            y=buffer_data["BALANCE_QTY"],
+            y=buffer_data["WAITING_WIP_QTY"],
             mode="lines+markers",
-            name=f"BUFFER_ID - {buffer_id}"
+            name=f"BUFFER_ID: {buffer_id}, ITEM_ID: {item_id}"
         ))
 
     fig.update_layout(
-        title="BUFFER_ID별 날짜별 재공 수량 변화",
+        title="BUFFER_ID별 ITEM_ID별 날짜별 재공 수량 변화",
         xaxis_title="날짜",
         yaxis_title="잔여 재공 수량",
-        legend_title="BUFFER_ID"
+        legend_title="BUFFER_ID - ITEM_ID"
     )
 
     st.plotly_chart(fig)
