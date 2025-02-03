@@ -4,7 +4,7 @@ import plotly.graph_objects as go
 import numpy as np
 
 def show_page(uploaded_files):
-    st.title("설비 대기 ITEM별 재공 수량")
+    st.title("설비 대기 BUFFER&ITEM별 재공 수량")
 
     # LOT_HISTORY.parquet 파일 확인 및 읽기
     if "LOT_HISTORY.parquet" not in uploaded_files:
